@@ -1,0 +1,120 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #fff;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+.header {
+    display: flex;
+    flex-wrap: wrap; /* Elemen pindah baris jika perlu */
+    align-items: center;
+    justify-content: space-between; 
+    padding: 10px 20px;
+    border-bottom: 1px solid #ddd;
+    width: 100vw; 
+    box-sizing: border-box;
+}
+.header img {
+    height: 50px;
+    margin-right: 10px;
+}
+.header .title .subtitle {
+    font-size: 14px;
+    font-weight: normal;
+}
+.header .title {
+    display: flex;
+    flex-direction: column;
+    font-size: 18px;
+    font-weight: bold;
+    margin-right: 20px;
+}
+.header .menu {
+    display: flex;
+    flex: 1; 
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.header .menu a {
+    margin: 0 10px;
+    text-decoration: none;
+    color: #333;
+    font-size: 14px;
+}
+.header .menu .notification {
+    background-color: #ddd;
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 12px;
+}
+.header .user {
+    flex-shrink: 0; 
+    font-size: 14px;
+    white-space: nowrap; 
+}
+.container {
+    width: 100vw;
+    height: 100vh;
+    background-color: #fff;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+.content {
+    flex: 1;
+    padding-right: 15px;
+}
+.sidebar {
+    flex: 1;
+    padding-left: 20px;
+    border-left: 1px solid #ddd;
+}
+.content h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+.content p {
+    margin-bottom: 10px;
+}
+.content ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+.content ul li {
+    margin-bottom: 5px;
+}
+.content ul li a {
+    color: #007bff;
+    text-decoration: none;
+}
+.content ul li a:hover {
+    text-decoration: underline;
+}
+.sidebar h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+.progress-bar {
+    background-color: #f3f3f3;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+.progress-bar .progress {
+    height: 20px;
+    background-color: #f0ad4e;
+    text-align: center;
+    color: white;
+    line-height: 20px;
+}
+.progress-bar .progress.small {
+    width: 30%;
+}
+.progress-bar .progress.large {
+    width: 84%;
+}
