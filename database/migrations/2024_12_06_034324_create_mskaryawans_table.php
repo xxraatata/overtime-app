@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('dpo_mskaryawan', function (Blueprint $table) {
             $table->id('kry_id');
             $table->string('kry_id_alternative');
-            $table->string('kry_jabatan');
+            $table->unsignedBigInteger('kry_jabatan');
             $table->string('kry_name');
             $table->string('kry_username');
             $table->string('kry_password');
@@ -24,8 +24,6 @@ return new class extends Migration
             $table->string('kry_modified_by');
             $table->timestamps();
 
-            $table->index('kry_jabatan');
-        
             $table->foreign('kry_jabatan')
                   ->references('jbt_id')
                   ->on('dpo_msjabatan')

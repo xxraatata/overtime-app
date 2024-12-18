@@ -2,19 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class mskaryawan extends Model
+class mskaryawan extends Authenticatable
 {
     use HasFactory;
 
+    protected $table = 'dpo_mskaryawan';
     protected $primaryKey = 'kry_id';
     public $incrementing = true;
     protected $keyType = 'int';
 
     protected $fillable = [
         'kry_id_alternative',
+        'kry_jabatan',
         'kry_name',
         'kry_username',
         'kry_password',
@@ -24,8 +26,12 @@ class mskaryawan extends Model
         'kry_modified_by'
     ];
 
+    public function getAuthPassword()
+    {
+        return $this->kry_password;
+    }
+
     public function trpengajuan() {
         return $this->hasMany(trpengajuanovertime::class, 'pjn_kry_id', 'kry_id');
     }
-
 }
