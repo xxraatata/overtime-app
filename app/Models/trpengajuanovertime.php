@@ -9,6 +9,9 @@ class trpengajuanovertime extends Model
 {
     use HasFactory;
 
+    protected $table = 'dpo_trpengajuanovertime';
+    protected $primaryKey = 'pjn_id';
+
     protected $fillable = [
         'pjn_type',
         'pjn_description',
@@ -27,7 +30,7 @@ class trpengajuanovertime extends Model
 
     public function msnotifikasi()
     {
-        return $this->hasMany(msnotifikasi::class, 'pjn_id');
+        return $this->hasMany(msnotifikasi::class, 'ntf_pjn_id', 'pjn_id');
     }
 
 }

@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('dpo_msjabatan', function (Blueprint $table) {
-            $table->id('jbt_id');
-            $table->string('jbt_name');
-            $table->string('jbt_status');
-            $table->timestamps();
+        Schema::table('dpo_msjabatan', function (Blueprint $table) {
+            //
         });
     }
 
@@ -24,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('dpo_msjabatan');
+        Schema::table('dpo_msjabatan', function (Blueprint $table) {
+            //
+        });
     }
 };

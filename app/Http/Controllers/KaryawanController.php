@@ -2,105 +2,105 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\trpengajuanovertime;
 use Illuminate\Http\Request;
-use Illuminate\Http\RedirectResponse;
-use App\Models\mskaryawan;
 use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 
 class KaryawanController extends Controller
 {
-    public function index(Request $request): View 
+    public function riwayat(Request $request): View
     {
-        $search = $request->input('search');
+        $pengajuan = trpengajuanovertime::where('pjn_kry_id', auth()->id())
+            ->latest()
+            ->paginate(10);
 
-        // Query pencarian 
-        $karyawan = mskaryawan::when($search, function ($query, $search) {
-            return $query->where('kry_id_alternative', 'like', "%$search%")
-                         ->orWhere('kry_name', 'like', "%$search%");
-        })->latest()->paginate(10);     
-
-        return view('karyawan.index', compact('karyawan')); 
+        return view('pages.Karyawan.RiwayatKaryawan', compact('pengajuan'));
     }
 
-    public function create(): View 
+    public function create(): View
     {
-        return view('karyawan.create');
+        return view('pages.Karyawan.TambahPengajuanKaryawan');
     }
 
     public function store(Request $request): RedirectResponse
     {
-        // Validasi data
-        $request->validate([
-            'kry_id_alternative'    => 'required|string|max:10',
-            'kry_jabatan'           => 'required|string|max:50',
-            'kry_name'              => 'required|string|max:100',
-            'kry_username'          => 'required|string|max:50',
-            'kry_password'          => 'required|string|max:50',
-            'kry_email'             => 'required|string|max:100'
+        $validated = $request->validate([
+            'jenis' => 'required',
+            'keterangan' => 'required',
+            'tanggal' => 'required|date',
+            'bukti_excel' => 'required|file|mimes:xlsx,xls',
+            'bukti_pdf' => 'required|file|mimes:pdf'
         ]);
 
-        mskaryawan::create([
-            'kry_id_alternative'    => $request->kry_id_alternative,
-            'kry_jabatan'           => $request->kry_jabatan,
-            'kry_name'              => $request->kry_name,
-            'kry_username'          => $request->kry_username,
-            'kry_password'          => $request->kry_password,
-            'kry_email'             => $request->kry_email,
-            'kry_status'            => 'Aktif',
-            'kry_created_by'        => $request->kry_id_alternative,
-            'kry_modified_by'       => $request->kry_id_alternative
+        $excelPath = $request->file('bukti_excel')->store('public/overtime/excel');
+        $pdfPath = $request->file('bukti_pdf')->store('public/overtime/pdf');
+
+        trpengajuanovertime::create([
+            'pjn_type' => $validated['jenis'],
+            'pjn_description' => $validated['keterangan'],
+            'pjn_excel_proof' => $excelPath,
+            'pjn_pdf_proof' => $pdfPath,
+            'pjn_status' => 'Pending',
+            'pjn_created_by' => auth()->id(),
+            'pjn_modified_by' => auth()->id(),
+            'pjn_kry_id' => auth()->id()
         ]);
 
-        // Redirect dengan pesan sukses
-        return redirect()->route('karyawan.index')->with('success', 'Karyawan berhasil ditambahkan.');
+        return redirect()->route('karyawan.pengajuan')
+            ->with('success', 'Pengajuan overtime berhasil dibuat');
     }
 
     public function edit(string $id): View
     {
-        $karyawan = mskaryawan::findOrFail($id);
+        $pengajuan = trpengajuanovertime::where('pjn_kry_id', auth()->id())
+            ->findOrFail($id);
 
-        // Tampilkan form edit 
-        return view('karyawan.update', compact('karyawan'));
+        return view('pages.Karyawan.EditPengajuanKaryawan', compact('pengajuan'));
     }
 
     public function update(Request $request, string $id): RedirectResponse
     {
-        $request->validate([
-            'kry_id_alternative'    => 'required|string|max:10',
-            'kry_jabatan'           => 'required|string|max:50',
-            'kry_name'              => 'required|string|max:100',
-            'kry_username'          => 'required|string|max:50',
-            'kry_password'          => 'required|string|max:50',
-            'kry_email'             => 'required|string|max:100'
+        $pengajuan = trpengajuanovertime::where('pjn_kry_id', auth()->id())
+            ->findOrFail($id);
+
+        $validated = $request->validate([
+            'jenis' => 'required',
+            'keterangan' => 'required',
+            'tanggal' => 'required|date',
+            'bukti_excel' => 'nullable|file|mimes:xlsx,xls',
+            'bukti_pdf' => 'nullable|file|mimes:pdf'
         ]);
 
-        $karyawan = mskaryawan::findOrFail($id);
+        if ($request->hasFile('bukti_excel')) {
+            Storage::delete($pengajuan->pjn_excel_proof);
+            $excelPath = $request->file('bukti_excel')->store('public/overtime/excel');
+            $pengajuan->pjn_excel_proof = $excelPath;
+        }
 
-        $karyawan->update([
-            'kry_id_alternative'    => $request->kry_id_alternative,
-            'kry_jabatan'           => $request->kry_jabatan,
-            'kry_name'              => $request->kry_name,
-            'kry_username'          => $request->kry_username,
-            'kry_password'          => $request->kry_password,
-            'kry_email'             => $request->kry_email,
-            'kry_status'            => 'Aktif',
-            'kry_created_by'        => $request->kry_id_alternative,
-            'kry_modified_by'       => $request->kry_id_alternative
+        if ($request->hasFile('bukti_pdf')) {
+            Storage::delete($pengajuan->pjn_pdf_proof);
+            $pdfPath = $request->file('bukti_pdf')->store('public/overtime/pdf');
+            $pengajuan->pjn_pdf_proof = $pdfPath;
+        }
+
+        $pengajuan->update([
+            'pjn_type' => $validated['jenis'],
+            'pjn_description' => $validated['keterangan'],
+            'pjn_modified_by' => auth()->id()
         ]);
 
-        // Redirect dengan pesan sukses
-        return redirect()->route('karyawan.index')->with('success', 'Karyawan berhasil diupdate.');
+        return redirect()->route('karyawan.pengajuan')
+            ->with('success', 'Pengajuan overtime berhasil diperbarui');
     }
 
-    public function destroy(string $id): RedirectResponse
+    public function detail(string $id): View
     {
-        $karyawan = mskaryawan::findOrFail($id);
+        $pengajuan = trpengajuanovertime::where('pjn_kry_id', auth()->id())
+            ->with('dpo_mskaryawan')
+            ->findOrFail($id);
 
-        // Mengubah status menjadi 0 (tidak aktif)
-        $karyawan->update([
-            'kry_status' => 'Tidak Aktif'
-        ]);
-
-        return redirect()->route('karyawan.index')->with('success', 'Karyawan berhasil dihapus.');
+        return view('pages.Karyawan.DetailPengajuanKaryawan', compact('pengajuan'));
     }
 }
