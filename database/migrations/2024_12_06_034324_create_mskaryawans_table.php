@@ -23,13 +23,6 @@ return new class extends Migration
             $table->string('kry_created_by');
             $table->string('kry_modified_by');
             $table->timestamps();
-
-            $table->index('kry_jabatan');
-        
-            $table->foreign('kry_jabatan')
-                  ->references('jbt_id')
-                  ->on('dpo_msjabatan')
-                  ->onDelete('cascade');
         });
     }
 
