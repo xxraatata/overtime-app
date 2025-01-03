@@ -1,60 +1,53 @@
 @extends('layouts.Layout.Layout')
 
 @section('content')
-    <div class="login-page">
-        <div class="login-header">
-            <img 
-                src="https://pmb.polytechnic.astra.ac.id/Images/IMG_Logo.png?v=20230623" 
-                alt="ASTRAtech" 
-            />
+<div class="container">
+    <div class="breadcrumb">
+        <a href="#">Employee Self Service Politeknik Astra</a>
+    </div>
+    
+    <div class="header">
+        <div class="form-title">Login</div>
+    </div>
+    
+    @if ($errors->any())
+        <div class="error-message">
+            {{ $errors->first() }}
         </div>
-
-        <div class="login-container">
-            <div class="login-box">
-                <h2 class="login-title">Selamat Datang</h2>
-                
-                @if ($errors->any())
-                    <div class="error-message">
-                        {{ $errors->first() }}
-                    </div>
-                @endif
-                
-                <form method="POST" action="{{ route('login') }}">
-                    @csrf
-                    <div class="form-group">
-                        <label for="kry_username">Nama Akun</label>
-                        <input
-                            type="text"
-                            id="kry_username"
-                            name="kry_username"
-                            value="{{ old('kry_username') }}"
-                            required
-                            autocomplete="username"
-                            placeholder="Masukkan nama akun"
-                        />
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="kry_password">Kata Sandi</label>
-                        <input
-                            type="password"
-                            id="kry_password"
-                            name="kry_password"
-                            required
-                            autocomplete="current-password"
-                            placeholder="Masukkan kata sandi"
-                        />
-                    </div>
-                    
-                    <button type="submit" class="btn-masuk">
-                        Masuk
-                    </button>
-                </form>
+    @endif
+    
+    <form method="POST" action="{{ route('login') }}" class="login-form">
+        @csrf
+        <div class="form-group">
+            <div class="col col-12">
+                <label>Username <span class="required">*</span></label>
+                <input 
+                    type="text" 
+                    name="kry_username" 
+                    value="{{ old('kry_username') }}"
+                    required
+                    autocomplete="username"
+                    placeholder="Masukkan username"
+                />
             </div>
         </div>
-
-        <div class="login-footer">
-            <p>Copyright © 2024 - Employee Self Service Politeknik Astra</p>
+        
+        <div class="form-group">
+            <div class="col col-12">
+                <label>Password <span class="required">*</span></label>
+                <input 
+                    type="password" 
+                    name="kry_password" 
+                    required
+                    autocomplete="current-password"
+                    placeholder="Masukkan password"
+                />
+            </div>
         </div>
-    </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">Login</button>
+        </div>
+    </form>
+</div>
 @endsection

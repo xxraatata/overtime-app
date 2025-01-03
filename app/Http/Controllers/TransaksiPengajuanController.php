@@ -2,29 +2,30 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\msnotifikasi;
+use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
-use App\Models\trpengajuanovertime;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
 
 class TransaksiPengajuanController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
     public function index(Request $request): View 
     {
         $search = $request->input('search');
-
-        // Query pencarian 
-        $pengajuan = trpengajuanovertime::with('dpo_mskaryawan')
-            ->when($search, function ($query, $search) {
-                return $query->whereHas('dpo_mskaryawan', function ($query) use ($search) {
-                    $query->where('kry_name', 'like' , "%$search%");
-                });
-            })
-            ->latest()->paginate(10);     
-
-        return view('pengajuan.index', compact('pengajuan')); 
+        
+        // Panggil store procedure untuk mendapatkan data
+        $pengajuan = DB::select('EXEC dbo.dpo_getPengajuanOvertime ?', [$search]);
+        
+        return view('pengajuan.index', [
+            'pengajuan' => collect($pengajuan)->paginate(10)
+        ]);
     }
 
     public function create(): View 
@@ -35,132 +36,112 @@ class TransaksiPengajuanController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'pjn_type'              => 'required|string|max:50',
-            'pjn_description'       => 'string|max:250',
-            'pjn_excel_proof'       => 'nullable|mimes:xlsx, xls|max:10240',
-            'pjn_pdf_proof'         => 'required|mimes:pdf|max:10240',
-            'pjn_review_notes'      => 'nullable|string|max:250'
+            'jenis_pengajuan' => 'required|exists:msjabatan,id',
+            'keterangan' => 'required|string|max:255',
+            'tanggal' => 'required|date',
+            'bukti' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048'
         ]);
 
-        // Menyimpan file Excel jika ada
-        $excel = null;
-        if ($request->hasFile('pjn_excel_proof')) {
-            $file = $request->file('pjn_excel_proof');
-            $excel = $file->store('uploads/excel', 'public'); // Menyimpan file Excel
+        // Menyimpan file bukti jika ada
+        $buktiPath = null;
+        if ($request->hasFile('bukti')) {
+            $buktiPath = $request->file('bukti')->store('uploads/bukti', 'public');
         }
 
-        // Menyimpan file PDF 
-        $pdf = null;
-        if ($request->hasFile('pjn_pdf_proof')) {
-            $file = $request->file('pjn_pdf_proof');
-            $pdf = $file->store('uploads/pdf', 'public'); // Menyimpan file PDF
-        }
-
-        trpengajuanovertime::create([
-            'pjn_type'              => $request->pjn_type,
-            'pjn_description'       => $request->pjn_description,
-            'pjn_excel_proof'       => $excel,
-            'pjn_pdf_proof'         => $pdf,
-            'pjn_review_notes'      => $request->pjn_review_notes,
-            'pjn_status'            => 'Draft'
+        // Panggil store procedure
+        $result = DB::select('EXEC dbo.dpo_createPengajuanOvertime ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?', [
+            $request->jenis_pengajuan, // p1
+            $request->keterangan,      // p2
+            null,                      // p3 (bukti excel)
+            $buktiPath,                // p4 (bukti pdf)
+            Auth::user()->kry_username,  // p5 (username)
+            // Parameter 6-50 diisi null karena tidak digunakan
+            ...array_fill(0, 45, null)
         ]);
 
-        // Redirect dengan pesan sukses
-        return redirect()->route('pengajuan.index')->with('success', 'Pengajuan berhasil disimpan.');
+        // Handle response dari store procedure
+        if ($result[0]->hasil === 'OK') {
+            return redirect()->route('pengajuan.index')
+                ->with('success', 'Pengajuan berhasil disimpan. ID: ' . $result[0]->AlternativeID);
+        } else {
+            return back()->withErrors(['error' => $result[0]->hasil]);
+        }
     }
 
     public function edit(string $id): View
     {
-        $pengajuan = trpengajuanovertime::findOrFail($id);
+        // Panggil store procedure untuk mendapatkan data pengajuan
+        $pengajuan = DB::select('EXEC dbo.dpo_getPengajuanById ?', [$id]);
+        
+        if (empty($pengajuan)) {
+            abort(404, 'Pengajuan tidak ditemukan');
+        }
 
-        // Tampilkan form edit 
-        return view('pengajuan.update', compact('pengajuan'));
+        return view('pengajuan.update', [
+            'pengajuan' => $pengajuan[0]
+        ]);
     }
 
     public function update(Request $request, string $id): RedirectResponse
     {
         $request->validate([
-            'pjn_type'              => 'required|string|max:50',
-            'pjn_description'       => 'string|max:250',
-            'pjn_excel_proof'       => 'nullable|mimes:xlsx, xls|max:10240',
-            'pjn_pdf_proof'         => 'required|mimes:pdf|max:10240',
-            'pjn_review_notes'      => 'nullable|string|max:250'
+            'jenis_pengajuan' => 'required|exists:msjabatan,id',
+            'keterangan' => 'required|string|max:255',
+            'tanggal' => 'required|date',
+            'bukti' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048'
         ]);
 
-        $pengajuan = trpengajuanovertime::findOrFail($id);
-
-        // Menyimpan file Excel jika ada file baru
-        $excel = $pengajuan->pjn_excel_proof; 
-        if ($request->hasFile('pjn_excel_proof')) {
-            // Hapus file lama jika ada
-            if ($excel) {
-                Storage::disk('public')->delete($excel);
-            }
-            // Simpan file baru
-            $file = $request->file('pjn_excel_proof');
-            $excel = $file->store('uploads/excel', 'public');
+        // Menyimpan file bukti jika ada
+        $buktiPath = null;
+        if ($request->hasFile('bukti')) {
+            $buktiPath = $request->file('bukti')->store('uploads/bukti', 'public');
         }
 
-        // Menyimpan file PDF jika ada file baru
-        $pdf = $pengajuan->pjn_pdf_proof; 
-        if ($request->hasFile('pjn_pdf_proof')) {
-            // Hapus file lama jika ada
-            if ($pdf) {
-                Storage::disk('public')->delete($pdf);
-            }
-            // Simpan file baru
-            $file = $request->file('pjn_pdf_proof');
-            $pdf = $file->store('uploads/pdf', 'public');
-        }
-
-        $pengajuan->update([
-            'pjn_type'              => $request->pjn_type,
-            'pjn_description'       => $request->pjn_description,
-            'pjn_excel_proof'       => $excel,
-            'pjn_pdf_proof'         => $pdf,
-            'pjn_review_notes'      => $request->pjn_review_notes,
-            'pjn_status'            => 'Draft',
+        // Panggil store procedure untuk update
+        $result = DB::select('EXEC dbo.dpo_updatePengajuanOvertime ?, ?, ?, ?, ?, ?', [
+            $id,
+            $request->jenis_pengajuan,
+            $request->keterangan,
+            $request->tanggal,
+            $buktiPath,
+            Auth::user()->kry_username
         ]);
 
-        // Redirect dengan pesan sukses
-        return redirect()->route('pengajuan.index')->with('success', 'Pengajuan berhasil diupdate.');
+        if ($result[0]->hasil === 'OK') {
+            return redirect()->route('pengajuan.index')
+                ->with('success', 'Pengajuan berhasil diupdate.');
+        } else {
+            return back()->withErrors(['error' => $result[0]->hasil]);
+        }
     }
 
     public function submit(string $id): RedirectResponse
     {
-        $pengajuan = trpengajuanovertime::findOrFail($id);
-
-        $pengajuan->update([
-            'pjn_status'        => 'Diajukan',
-            // 'pjn_modified_by'   => auth()->user()->name ?? 'karyawan', // Sesuaikan dengan autentikasi
+        // Panggil store procedure untuk submit pengajuan
+        $result = DB::select('EXEC dbo.dpo_submitPengajuanOvertime ?, ?', [
+            $id,
+            Auth::user()->kry_username
         ]);
 
-        // Simpan notifikasi
-        msnotifikasi::create([
-            'status' => 'Belum Dibaca',
-            'pjn_id' => $pengajuan->id,
-            
-        ]);
-
-        return redirect()->route('pengajuan.index')->with('success', 'Pengajuan berhasil diajukan.');
+        if ($result[0]->hasil === 'OK') {
+            return redirect()->route('pengajuan.index')
+                ->with('success', 'Pengajuan berhasil diajukan.');
+        } else {
+            return back()->withErrors(['error' => $result[0]->hasil]);
+        }
     }
 
     public function destroy(string $id): RedirectResponse
     {
-        $pengajuan = trpengajuanovertime::findOrFail($id);
+        // Panggil store procedure untuk hapus pengajuan
+        $result = DB::select('EXEC dbo.dpo_deletePengajuanOvertime ?', [$id]);
 
-        // Hapus file yang diunggah jika ada
-        if ($pengajuan->pjn_excel_proof) {
-            Storage::disk('public')->delete($pengajuan->pjn_excel_proof);
+        if ($result[0]->hasil === 'OK') {
+            return redirect()->route('pengajuan.index')
+                ->with('success', 'Pengajuan berhasil dihapus.');
+        } else {
+            return back()->withErrors(['error' => $result[0]->hasil]);
         }
-
-        if ($pengajuan->pjn_pdf_proof) {
-            Storage::disk('public')->delete($pengajuan->pjn_pdf_proof);
-        }
-
-        $pengajuan->delete();
-
-        return redirect()->route('pengajuan.index')->with('success', 'Pengajuan berhasil dihapus.');
     }
 
 }

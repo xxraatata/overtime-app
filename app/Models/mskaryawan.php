@@ -30,8 +30,4 @@ class mskaryawan extends Authenticatable
     {
         return $this->kry_password;
     }
-
-    public function trpengajuan() {
-        return $this->hasMany(trpengajuanovertime::class, 'pjn_kry_id', 'kry_id');
-    }
 }
